@@ -1,4 +1,4 @@
-2016-03-13-some-post-example1.markdown---
+---
 layout: post
 title:  "Some post example"
 date:   2016-03-13 22:37:06 +0100

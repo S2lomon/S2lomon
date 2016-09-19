@@ -23,6 +23,9 @@ body {
     -o-font-feature-settings: "kern" 1;
     font-feature-settings: "kern" 1;
     font-kerning: normal;
+    background-image: url($background-image);
+    background-position: top;
+    background-repeat: no-repeat;
 }
 
 
@@ -156,12 +159,16 @@ pre {
  * Wrapper
  */
 .wrapper {
+    background: $background-color;
+    opacity: $wrapper-opacity;
     max-width: -webkit-calc(#{$content-width} - (#{$spacing-unit} * 2));
     max-width:         calc(#{$content-width} - (#{$spacing-unit} * 2));
     margin-right: auto;
     margin-left: auto;
     padding-right: $spacing-unit;
     padding-left: $spacing-unit;
+    padding-top: $spacing-unit;
+    padding-bottom: $spacing-unit;
     @extend %clearfix;
 
     @include media-query($on-laptop) {
