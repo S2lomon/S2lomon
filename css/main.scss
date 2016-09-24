@@ -13,19 +13,20 @@ $small-font-size:  $base-font-size * 0.875;
 $base-line-height: 1.5;
 
 $spacing-unit:     30px;
-$wrapper-opacity:  0.95;
+$wrapper-opacity:  0.70;
 
 $text-color:       #111;
 $background-color: #fdfdfd;
-$background-image: "/img/graphite-circle-heads-condense.png";
-$brand-color:      #47607c;
+$background-image: "/img/graphite-circle-heads-condense-25-opacity.png";
+$brand-color:      #3e80c9;
+$brand-color-dark: darken($brand-color, 15%);
 
 $grey-color:       #828282;
 $grey-color-light: lighten($grey-color, 40%);
 $grey-color-dark:  darken($grey-color, 25%);
 
 // Width of the content area
-$content-width:    800px;
+$content-width:    1024px;
 
 $on-palm:          600px;
 $on-laptop:        800px;

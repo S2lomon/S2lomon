@@ -6,16 +6,18 @@
 # 'jekyll serve'. If you change this file, please restart the server process.
 
 # Site settings
-title: About software development that make sense
+title: Szymon Homa
+subtitle: on software and such
 email: s2lomon@gmail.com
 description: > # this means to ignore newlines until "baseurl:"
-  Blog regarding topic like Java/Java8, rx-java, reactor, reactive programming, CQRS, NoSQL,
-  TDD, BDD, DDD, modeling, analysis, CleanCode, SOLID, CI, CD Evolutionary Architecture, YAGNI(sic!) etc.
-  In one sentence - it's about software development that make sense.
+  Main topics that this blog should tackle are: Java/Java8, rx-java, reactor, reactive programming, CQRS, NoSQL,
+  TDD, BDD, DDD, modeling, analysis, CleanCode, SOLID, CI, CD, Evolutionary Architecture and so on.
+
 baseurl: "" # the subpath of your site, e.g. /blog
-url: "http://techbites.net" # the base hostname & protocol for your site
+url: "http://szymonhoma.com" # the base hostname & protocol for your site
 twitter_username: s2lomon
 github_username:  s2lomon
+linkedin_profile_uri: szymon-homa-515ba85b
 
 gems: [jekyll-paginate]
 

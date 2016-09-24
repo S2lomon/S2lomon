@@ -98,7 +98,7 @@ a {
     text-decoration: none;
 
     &:visited {
-        color: darken($brand-color, 15%);
+        color: $brand-color-dark;
     }
 
     &:hover {
@@ -209,5 +209,10 @@ pre {
         path {
             fill: $grey-color;
         }
+    }
+
+    > span {
+        width: 20px;
+        height: 20px;
     }
 }
