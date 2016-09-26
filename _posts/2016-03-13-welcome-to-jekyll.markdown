@@ -3,6 +3,7 @@ layout: post
 title:  "Welcome to Jekyll!"
 date:   2016-03-13 22:37:06 +0100
 categories: jekyll update
+commentIssueId: 1
 ---
 
 Jekyll fast know-how

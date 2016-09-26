@@ -12,4 +12,48 @@ layout: default
     {{ content }}
   </div>
 
+  <div id="comments" style="width:100%; height:100%;">
+      <div id="addcomment"  style="background:red; width:100px; height: 100px;"></div>
+
+  </div>
+
+  <script type="text/javascript" src="{{ site.baseurl | append: "/scripts/jquery-3.1.1.min.js" }}"></script>
+
+  <script type="text/javascript">
+
+    function loadComments(data) {
+        for (var i=0; i<data.length; i++) {
+            var cuser = data[i].user.login;
+            var cuserlink = "https://www.github.com/" + data[i].user.login;
+            var clink = "https://github.com/s2lomon/s2lomon/issues/{{page.commentIssueId}}#issuecomment-" + data[i].url.substring(data[i].url.lastIndexOf("/")+1);
+            var cbody = data[i].body_html;
+            var cavatarlink = data[i].user.avatar_url;
+            var cdate = data[i].created_at;
+            jQuery("#comments").append("<div class='comment'><div class='commentheader'><div class='commentgravatar'>" + '<img src="' + cavatarlink + '" alt="" width="20" height="20">' + "</div><a class='commentuser' href=\""+ cuserlink + "\">" + cuser + "</a><a class='commentdate' href=\"" + clink + "\">" + cdate + "</a></div><div class='commentbody'>" + cbody + "</div></div>");
+        }
+    }
+
+    jQuery(window).on('load', function() {
+       var commentsReq = jQuery.ajax("https://api.github.com/repos/s2lomon/s2lomon/issues/{{page.commentIssueId}}/comments?per_page=100", {
+            headers: {Accept: "application/vnd.github.full+json"},
+            dataType: "json",
+            crossDomain: true
+        })
+        commentsReq.done(function (msg) {loadComments(msg);});
+
+        jQuery("#addcomment").on("click", function() {
+          var createReq = jQuery.post("https://api.github.com/repos/s2lomon/s2lomon/issues/{{page.commentIssueId}}/comments", {"body": "New Comment"});
+          createReq.fail(function (obj1, obj2) {
+            alert(obj1 + obj2)
+          });
+          createReq.done(function() {alert("done")});
+
+        })
+
+    })
+
+
+  </script>
+
+
 </article>
