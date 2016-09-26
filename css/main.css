@@ -167,15 +167,25 @@ pre {
     padding-top: 30px;
     padding-bottom: 15px; }
 
+.site-title-wrapper {
+  width: 100%;
+  height: auto;
+  overflow: hidden; }
+
 .site-title {
-  font-size: 26px;
+  font-size: 36px;
   font-weight: 300;
-  line-height: 56px;
+  line-height: 66px;
   letter-spacing: -1px;
   margin-bottom: 0;
   float: left; }
   .site-title, .site-title:visited {
     color: #3e80c9; }
+
+.site-subtitle {
+  font-size: 18px;
+  line-height: 33px;
+  letter-spacing: -1px; }
 
 .site-nav-wrapper {
   width: 100%;
@@ -333,6 +343,41 @@ pre {
     @media screen and (max-width: 800px) {
       .post-content h4 {
         font-size: 18px; } }
+
+.comments-pane .comments-info {
+  width: 100%;
+  border-bottom: 1px solid #828282; }
+  .comments-pane .comments-info p {
+    display: box;
+    float: right; }
+
+#comments .comment {
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+  padding-top: 15px; }
+  #comments .comment .comment-header {
+    width: 100%;
+    height: 30px;
+    line-height: 30px;
+    background-color: #e8e8e8; }
+    #comments .comment .comment-header img {
+      width: 30px;
+      height: 30px;
+      float: left; }
+    #comments .comment .comment-header a.comment-user {
+      display: block;
+      float: left;
+      text-indent: 7.5px; }
+    #comments .comment .comment-header a.comment-date {
+      display: block;
+      float: right; }
+  #comments .comment .comment-body {
+    width: 934px;
+    padding-top: 15px;
+    padding-left: 30px;
+    height: auto;
+    overflow: hidden; }
 
 /**
  * Syntax highlighting styles
