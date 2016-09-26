@@ -2,7 +2,10 @@
 
     <div class="wrapper">
 
-        <a class="site-title" href="{{ site.baseurl }}/">{{ site.title | append: ' ' | append: site.subtitle}}</a>
+        <div class="site-title-wrapper">
+            <a class="site-title" href="{{ site.baseurl }}/">{{ site.title }}</a>
+        </div>
+        <div class="site-subtitle">{{ site.subtitle }}</div>
 
         <div class="site-nav-wrapper">
             <nav class="site-nav">

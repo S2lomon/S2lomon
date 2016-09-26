@@ -16,10 +16,16 @@
     }
 }
 
+.site-title-wrapper {
+    width: 100%;
+    height: auto;
+    overflow: hidden;
+}
+
 .site-title {
-    font-size: 26px;
+    font-size: $site-title-font-size;
     font-weight: 300;
-    line-height: 56px;
+    line-height: $site-title-line-height;
     letter-spacing: -1px;
     margin-bottom: 0;
     float: left;
@@ -28,6 +34,12 @@
     &:visited {
         color: $brand-color;
     }
+}
+
+.site-subtitle {
+    font-size: $site-title-font-size / 2;
+    line-height: $site-title-line-height / 2;
+    letter-spacing: -1px
 }
 
 .site-nav-wrapper {
@@ -250,5 +262,61 @@
         @include media-query($on-laptop) {
             font-size: 18px;
         }
+    }
+}
+
+.comments-pane {
+
+    .comments-info {
+        width: 100%;
+        border-bottom: 1px solid $grey-color;
+
+        p {
+            display: box;
+            float: right;
+        }
+    }
+}
+
+#comments {
+    .comment {
+        width: 100%;
+        height: auto;
+        overflow: hidden;
+
+        padding-top: $spacing-unit / 2;
+
+        .comment-header {
+            width: 100%;
+            height: $comment-avatar-size;
+            line-height: $comment-avatar-size;
+            background-color: $grey-color-light;
+
+            img {
+                width: $comment-avatar-size;
+                height: $comment-avatar-size;
+                float: left;
+            }
+
+            a.comment-user {
+                display: block;
+                float: left;
+                text-indent: $spacing-unit / 4;
+            }
+
+            a.comment-date {
+                display:block;
+                float: right;
+            }
+        }
+
+        .comment-body {
+            width: $content-width - 2 * $spacing-unit - $comment-avatar-size;
+            padding-top: $spacing-unit / 2;
+            padding-left: $comment-avatar-size;
+            height: auto;
+            overflow: hidden;
+        }
+
     }
 }
