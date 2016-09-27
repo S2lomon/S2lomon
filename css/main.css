@@ -24,6 +24,10 @@ body {
   background-position: top;
   background-repeat: no-repeat; }
 
+.no-height {
+  height: 0px;
+  overflow: hidden; }
+
 /**
  * Set `margin-bottom` to maintain vertical rhythm
  */
@@ -149,6 +153,8 @@ pre {
   height: 16px;
   vertical-align: middle; }
   .icon > svg path {
+    fill: #828282; }
+  .icon > svg polygon {
     fill: #828282; }
 .icon > span {
   width: 20px;
@@ -350,6 +356,8 @@ pre {
   .comments-pane .comments-info p {
     display: box;
     float: right; }
+  .comments-pane .comments-info #refreshComments {
+    cursor: hand; }
 
 #comments .comment {
   width: 100%;
@@ -371,7 +379,8 @@ pre {
       text-indent: 7.5px; }
     #comments .comment .comment-header a.comment-date {
       display: block;
-      float: right; }
+      float: right;
+      margin-right: 7.5px; }
   #comments .comment .comment-body {
     width: 934px;
     padding-top: 15px;
