@@ -28,7 +28,10 @@ body {
     background-repeat: no-repeat;
 }
 
-
+.no-height {
+    height: 0px;
+    overflow: hidden;
+}
 
 /**
  * Set `margin-bottom` to maintain vertical rhythm
@@ -207,6 +210,10 @@ pre {
         vertical-align: middle;
 
         path {
+            fill: $grey-color;
+        }
+
+        polygon {
             fill: $grey-color;
         }
     }

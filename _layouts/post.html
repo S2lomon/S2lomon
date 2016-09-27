@@ -24,7 +24,8 @@ layout: default
 
 <div class="comments-pane">
     <div class="comments-info">
-        <label id="comments-toogle"></label>
+        <span id="refreshComments" class="icon">{% include icon-refresh.svg %}</span>
+        <span id="resizeComments" class="icon">{% include icon-double-arrow-n.svg %}</span>
         <p>To add a comment plese visit related github
             <a href="https://github.com/s2lomon/s2lomon/issues/{{page.commentIssueId}}">issue</a> and add a comment there.
         </p>
@@ -41,7 +42,9 @@ layout: default
 <script type="text/javascript">
     var issueId = {{ page.commentIssueId }};
     jQuery(window).on('load', () =>  {
-        handleComments(issueId)
+        handleComments(issueId);
+        prepareCommentsToogle(jQuery("#resizeComments"), jQuery("#comments"));
+        prepareCommentsRefresh(jQuery("#refreshComments"), issueId);
     });
 </script>
 
