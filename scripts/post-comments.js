@@ -5,7 +5,10 @@
             var clink = "https://github.com/s2lomon/s2lomon/issues/"+issueId+"#issuecomment-" + data[i].url.substring(data[i].url.lastIndexOf("/")+1);
             var cbody = data[i].body_html;
             var cavatarlink = data[i].user.avatar_url;
-            var cdate = data[i].created_at;
+            var creation_date = data[i].created_at;
+            var cdate = creation_date
+                .replace('T', ' ')
+                .replace('Z', ' ');
             jQuery("#comments").append(
             "<div class='comment'>"+
                 "<div class='comment-header'>" +
@@ -36,6 +39,10 @@
     var handleComments = function (issueId) {
         requestsComments(issueId, loadComments, logError);
     };
+
+    var prepareCommentsToogle() {
+
+    }
 
 
 

@@ -24,8 +24,9 @@ layout: default
 
 <div class="comments-pane">
     <div class="comments-info">
+        <label id="comments-toogle"></label>
         <p>To add a comment plese visit related github
-        <a href="https://github.com/s2lomon/s2lomon/issues/{{page.commentIssueId}}">issue</a> and add a comment there.
+            <a href="https://github.com/s2lomon/s2lomon/issues/{{page.commentIssueId}}">issue</a> and add a comment there.
         </p>
     </div>
     <div id="comments">
@@ -34,6 +35,8 @@ layout: default
 </div>
 
 <script type="text/javascript" src="{{ site.baseurl | append: "/scripts/jquery-3.1.1.min.js" }}"></script>
+<script type="text/javascript" src="{{ site.baseurl | append: "/scripts/date.js" }}"></script>
+<script type="text/javascript" src="{{ site.baseurl | append: "/scripts/jquery-ui.min.js" }}"></script>
 <script type="text/javascript" src="{{ site.baseurl | append: "/scripts/post-comments.js" }}"></script>
 <script type="text/javascript">
     var issueId = {{ page.commentIssueId }};
