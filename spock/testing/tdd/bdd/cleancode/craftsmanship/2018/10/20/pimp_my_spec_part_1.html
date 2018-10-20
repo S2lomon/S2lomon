@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Pimp my spec part 1</title>
+  <meta name="description" content="Ok, so right out of the bath: this entry is not about writing good tests. It’s not about writing clean tests either. This topic has been tackled on both in t...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://szymonhoma.com/spock/testing/tdd/bdd/cleancode/craftsmanship/2018/10/20/pimp_my_spec_part_1.html">
+  <link rel="alternate" type="application/rss+xml" title="Szymon Homa" href="http://szymonhoma.com/feed.xml">
+
+  <script type="text/javascript" src="/scripts/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery-3.1.1.min.js"></script>
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+    <div class="wrapper">
+
+        <div class="site-title-wrapper">
+            <a class="site-title" href="/">Szymon Homa</a>
+        </div>
+        <div class="site-subtitle">about software and things</div>
+
+        <div class="site-nav-wrapper">
+            <nav class="site-nav">
+                <a href="#" class="menu-icon">
+                    <svg viewBox="0 0 18 15">
+    <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+    <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+    <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+</svg>
+                </a>
+
+                <div class="trigger">
+                    
+                    
+                    <a class="page-link" href="/about/blog">About this blog</a>
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                </div>
+            </nav>
+        </div>
+
+    </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+    <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">Pimp my spec part 1</h1>
+        <p class="post-meta">
+            <time datetime="2018-10-20T00:00:00-05:00" itemprop="datePublished">Oct 20,
+                2018
+            </time>
+            
+        </p>
+    </header>
+
+    <div class="post-content" itemprop="articleBody">
+        <p>Ok, so right out of the bath: this entry is not about writing good tests. It’s not about writing clean tests either. This topic has been tackled on both in the past (like in the famous Clean Code book) and even quite recently on many occasions.
+No, it’s about doing the one more step, when your tests are understandable and easy to read and follow. It’s about checking the “what if”, experimenting with the form and tools and trying out new things, or at least in a new context.
+Long story short, it’s about putting the Groovy DSLs capabilities to work for your tests. I don’t claim to exhaust the topic either, simply writing down what has been working for me so far.
+<!--more--></p>
+<h2 id="traits-as-test-fixtures">Traits as Test Fixtures</h2>
+<p>I guess that anyone that has spend enough time writing and maintaining tests knows about a test fixture and test fixture management strategies (see G. Mezaros xUnit patterns).
+For anyone that is not familiar with the pattern name - I’m simply talking about the factory methods used in tests that creates our System Under Test (SUT) in a fresh and defined state,
+This allows us to stay DRY and focus only on testing the expected behaviour. This is not the only way of managing test fixtures, but it’s my favourite (and probably the one that’s mostly used). When using jUnit, the most common way of sharing fixture
+factories is to create many <code class="highlighter-rouge">static</code> factory methods that can create the SUT in a particular state. In groovy we can use <code class="highlighter-rouge">Traits</code>. Both constructions give us very similar things, still in my experience <code class="highlighter-rouge">Traits</code>
+tend to do it in a more explicit way for the test reader.
+Let’s go over few of such issues:</p>
+<ul>
+  <li>Static factory methods can be reused in each other but with traits we can use the inheritance, so the dependency is clearly visible in the spec definition (and not somewhere in the imports)</li>
+  <li>Static factory methods can be reused in tests, but again the inheritance of traits allows the test reader spot that immediately</li>
+  <li>Traits support multi inheritance, so they are not limited in a same way as Java inheritance</li>
+  <li>Taits can be stateful. This might become tricky still, since the jUnit always recreates the Specification class instance before each test it’s relatively safe (although I would not encourage that, as in most cases things can be achieved without that)</li>
+</ul>
+
+<p>All the above might not seem to be worth the hassle at first, but I guarantee that the change of approach does bring a long lasting benefits, especially when the code base growths, both in size and complexity. It’s worth to mention
+that similar visibility can be achieved in pure jUnit when using <code class="highlighter-rouge">interfaces</code> with <code class="highlighter-rouge">default</code> methods. Still the power of groovy DSLs goes well beyond that.</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">//Fixtures as static factory methods</span>
+
+<span class="kd">class</span> <span class="nc">AccessLevelFixture</span> <span class="o">{</span>
+
+    <span class="kd">static</span> <span class="n">AccessLevel</span> <span class="nf">grantAll</span><span class="o">()</span> <span class="o">{...}</span>
+    
+    <span class="kd">static</span> <span class="n">AccessLevel</span> <span class="nf">limitToCategory</span><span class="o">(</span><span class="n">String</span> <span class="n">cat</span><span class="o">)</span> <span class="o">{...}</span>
+<span class="o">}</span>
+
+<span class="kn">import</span> <span class="nn">static</span> <span class="n">AccessLevelFixture</span><span class="o">.</span><span class="na">grantAll</span>
+<span class="kn">import</span> <span class="nn">static</span> <span class="n">AccessLevelFixture</span><span class="o">.</span><span class="na">limitToCategory</span>
+
+<span class="kd">class</span> <span class="nc">UserFixture</span> <span class="o">{</span>
+
+    <span class="kd">static</span> <span class="n">User</span> <span class="nf">user</span><span class="o">(</span><span class="n">AccessLevel</span> <span class="n">access</span><span class="o">)</span> <span class="o">{...}</span>
+
+    <span class="kd">static</span> <span class="n">User</span> <span class="nf">fullAccessUser</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="nf">user</span><span class="o">(</span><span class="n">grantAll</span><span class="o">())</span>
+    <span class="o">}</span>
+
+    <span class="kd">static</span> <span class="n">User</span> <span class="nf">oneCategoryUser</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="nf">user</span><span class="o">(</span><span class="n">limitToCategory</span><span class="o">(</span><span class="s1">'CATEGORY_NAME'</span><span class="o">))</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="c1">//Fixtures as Traits</span>
+<span class="kd">trait</span> <span class="nc">WithAccessLevel</span> <span class="o">{</span>
+
+    <span class="n">AccessLevel</span> <span class="nf">grantAll</span><span class="o">()</span> <span class="o">{...}</span>
+    
+    <span class="n">AccessLevel</span> <span class="nf">limitToCategory</span><span class="o">(</span><span class="n">String</span> <span class="n">cat</span><span class="o">)</span> <span class="o">{...}</span>
+<span class="o">}</span>
+
+<span class="kd">trait</span> <span class="nc">WithUser</span> <span class="n">impements</span> <span class="n">WithAccessLevel</span> <span class="o">{</span>
+
+    <span class="n">User</span> <span class="nf">user</span><span class="o">(</span><span class="n">AccessLevel</span> <span class="n">access</span><span class="o">)</span> <span class="o">{...}</span>
+
+    <span class="n">User</span> <span class="nf">fullAccessUser</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="nf">user</span><span class="o">(</span><span class="n">grantAll</span><span class="o">())</span>
+    <span class="o">}</span>
+
+    <span class="n">User</span> <span class="nf">oneCategoryUser</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="nf">user</span><span class="o">(</span><span class="n">limitToCategory</span><span class="o">(</span><span class="s1">'CATEGORY_NAME'</span><span class="o">))</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<h2 id="default-parameters">Default parameters</h2>
+<p>It’s a very short one. On many occasions, when working with test fixtures factories, there is a need to create same SUT in many different ways, to support many test cases. 
+When doing this through factory methods, we can either name each method explicitly or overload them. 
+The approach depends on the context, but as a rule of thumb we can say that when the construction and meaning is simple and straight forward, we can go with explicit methods’ names, especially when they are short. 
+However when the construction starts to grow in details, using overloaded names has the benefit of not hiding this complexity so we can express the meaning through our production code (which empowers TDD in general)</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">WithUser</span> <span class="o">{</span>
+
+    <span class="c1">//Explicitly named methods</span>
+
+    <span class="kd">public</span> <span class="n">User</span> <span class="nf">fullAccessUser</span><span class="o">()</span> <span class="o">{...}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">User</span> <span class="nf">userWithDeniedAccessToReports</span><span class="o">()</span> <span class="o">{...}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">User</span> <span class="nf">userWithDeniedAccessToReportsAndBillingsAndWithPrincipal</span><span class="o">(</span><span class="n">User</span> <span class="n">principal</span><span class="o">)</span> <span class="o">{...}</span>
+
+    <span class="c1">//Overloaded methods</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">User</span> <span class="nf">user</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="nf">user</span><span class="o">(</span><span class="n">Privileges</span><span class="o">.</span><span class="na">ALL</span><span class="o">);</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">User</span> <span class="nf">user</span><span class="o">(</span><span class="n">Privileges</span> <span class="n">privileges</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="nf">user</span><span class="o">(</span><span class="n">privileges</span><span class="o">,</span> <span class="n">Hierarchy</span><span class="o">.</span><span class="na">top</span><span class="o">())</span>
+    <span class="o">}</span>
+
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">User</span> <span class="nf">user</span><span class="o">(</span><span class="n">Privileges</span> <span class="n">privileges</span><span class="o">,</span> <span class="n">Hierarchy</span> <span class="n">principalHierarchy</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">User</span> <span class="n">user</span> <span class="o">=</span>  <span class="k">new</span> <span class="n">User</span><span class="o">(....,</span> <span class="n">privileges</span><span class="o">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="na">attachTo</span><span class="o">(</span><span class="n">principalHierarchy</span><span class="o">);</span>
+        <span class="k">return</span> <span class="n">user</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>When using groovy, we are not forced to explicitly overload all the methods, as we might simply use the default parameters. There is a limit in usability to this approach, but it’s always worth to start from it:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">trait</span> <span class="nc">WithUser</span> <span class="o">{</span>
+
+    <span class="n">User</span> <span class="nf">user</span><span class="o">(</span><span class="n">Privileges</span> <span class="n">privileges</span> <span class="o">=</span> <span class="n">Privileges</span><span class="o">.</span><span class="na">ALL</span><span class="o">,</span> <span class="n">Hierarchy</span> <span class="n">principalHierarchy</span> <span class="o">=</span> <span class="n">Hierarchy</span><span class="o">.</span><span class="na">top</span><span class="o">())</span> <span class="o">{</span>
+        <span class="n">User</span> <span class="n">user</span> <span class="o">=</span>  <span class="k">new</span> <span class="n">User</span><span class="o">(....,</span> <span class="n">privileges</span><span class="o">)</span>
+        <span class="n">user</span><span class="o">.</span><span class="na">attachTo</span><span class="o">(</span><span class="n">principalHierarchy</span><span class="o">);</span>
+        <span class="k">return</span> <span class="n">user</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+<h2 id="delegatesto-closures">@DelegatesTo Closures</h2>
+
+<p>Closures play an important role when creating a code that embraces DSLs and <code class="highlighter-rouge">@DelegatesTo</code> anotation allows compilation checks and IDE suggestions. It works somewhat like this:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">FooBar</span> <span class="o">{</span>
+
+    <span class="kd">static</span> <span class="n">FooBar</span> <span class="nf">of</span><span class="o">(</span><span class="nd">@DelegatesTo</span><span class="o">(</span><span class="n">FooBar</span><span class="o">)</span> <span class="n">cfg</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">FooBar</span> <span class="n">fb</span> <span class="o">=</span> <span class="k">new</span> <span class="n">FooBar</span><span class="o">()</span>
+        <span class="n">fb</span><span class="o">.</span><span class="na">with</span><span class="o">(</span><span class="n">cfg</span><span class="o">)</span>
+        <span class="k">return</span> <span class="n">fb</span>
+    <span class="o">}</span>
+    
+    <span class="kt">void</span> <span class="nf">foo</span><span class="o">()</span> <span class="o">{...}</span>
+    
+    <span class="kt">void</span> <span class="nf">bar</span><span class="o">()</span> <span class="o">{...}</span>
+<span class="o">}</span>
+
+
+<span class="n">FooBar</span> <span class="n">fb</span> <span class="o">=</span> <span class="n">FooBar</span><span class="o">.</span><span class="na">of</span> <span class="o">{</span>
+    <span class="n">foo</span><span class="o">()</span>
+    <span class="n">bar</span><span class="o">()</span>
+<span class="o">}</span>
+
+</code></pre></div></div>
+
+<p>This approach has multiple applications when creating DSLs and can be used as well and as easily to improve our TestFixtures, Assertions etc.</p>
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kd">class</span> <span class="nc">CustomerActions</span> <span class="o">{</span>
+
+    <span class="kd">private</span> <span class="kd">final</span> <span class="n">Customer</span> <span class="n">customer</span>
+    
+    <span class="nd">@PackageScope</span>
+    <span class="n">CustomerActions</span><span class="o">(</span><span class="n">Customer</span> <span class="n">customer</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">customer</span> <span class="o">=</span> <span class="n">customer</span>
+    <span class="o">}</span>
+
+    <span class="kt">void</span> <span class="nf">makesAnOrder</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Item</span><span class="o">&gt;</span> <span class="n">items</span> <span class="o">=</span> <span class="o">[</span><span class="n">item</span><span class="o">()])</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">customer</span><span class="o">.</span><span class="na">order</span><span class="o">(</span><span class="n">items</span><span class="o">)</span>
+    <span class="o">}</span>
+    
+    <span class="kt">void</span> <span class="nf">confirmsOrder</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">customer</span><span class="o">.</span><span class="na">confirmOrder</span><span class="o">()</span>
+    <span class="o">}</span>
+    
+    <span class="kt">void</span> <span class="nf">withNumberOfConfirmedOrders</span><span class="o">(</span><span class="kt">int</span> <span class="n">orders</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">orders</span><span class="o">.</span><span class="na">times</span> <span class="o">{</span>
+            <span class="n">makesAnOrder</span><span class="o">()</span>
+            <span class="n">confirmsOrder</span><span class="o">()</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">trait</span> <span class="nc">WithCustomer</span> <span class="o">{</span>
+    
+    <span class="n">Customer</span> <span class="nf">customer</span><span class="o">(</span><span class="nd">@DelegatesTo</span><span class="o">(</span><span class="n">UserActions</span><span class="o">)</span> <span class="n">actions</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">Customer</span> <span class="n">c</span> <span class="o">=</span> <span class="n">customer</span><span class="o">()</span>
+        <span class="k">new</span> <span class="nf">CustomerActions</span><span class="o">(</span><span class="n">c</span><span class="o">).</span><span class="na">with</span><span class="o">(</span><span class="n">actions</span><span class="o">)</span>
+        <span class="k">return</span> <span class="n">c</span>
+    <span class="o">}</span>
+    
+    <span class="n">Customer</span> <span class="nf">customer</span><span class="o">()</span> <span class="o">{...}</span>
+<span class="o">}</span>
+
+<span class="kd">class</span> <span class="nc">UserSpecification</span> <span class="kd">extends</span> <span class="n">Specification</span> <span class="kd">implements</span> <span class="n">WithCustomer</span><span class="o">,</span> <span class="n">WithClock</span> <span class="o">{</span>
+
+    <span class="kt">def</span> <span class="s1">'customer receives reminder about not confirmed orders'</span><span class="o">()</span> <span class="o">{</span>
+        <span class="nl">given:</span>
+            <span class="n">Customer</span> <span class="n">customer</span> <span class="o">=</span> <span class="n">customer</span> <span class="o">{</span>
+                <span class="n">makesAnOrder</span><span class="o">()</span>
+            <span class="o">}</span>
+            
+        <span class="nl">when:</span>
+            <span class="n">aDayPassesBy</span><span class="o">()</span> <span class="c1">//time passes by, schedulers are executed etc.</span>
+            
+        <span class="nl">then:</span>
+            <span class="n">numberOfRemindersSentTo</span> <span class="n">customer</span> <span class="o">==</span> <span class="mi">1</span>
+    <span class="o">}</span>   
+    
+    <span class="kd">private</span> <span class="n">Integer</span> <span class="nf">numberOfRemindersSentTo</span><span class="o">(</span><span class="n">Customer</span> <span class="n">customer</span><span class="o">)</span> <span class="o">{}</span>
+<span class="o">}</span>
+
+</code></pre></div></div>
+<p>This technique is used to create Customer in a proper state, that’s useful for the test and does not overload the reader with unimportant details regarding its construction. 
+At first it might seem that<code class="highlighter-rouge">CustomerActions</code> is mostly a wrapper over a standard operations avaiable by domain model, which is technically correct statement.
+Even though this example might seem a bit over engineered, methods <code class="highlighter-rouge">void makesAnOrder(List&lt;Item&gt; items = [item()])</code> and <code class="highlighter-rouge">void withNumberOfConfirmedOrders(int number)</code> gives a hint of a more elaborate usages 
+that actualy bring a lot of value in terms of readability and maintenance. By using default parameters, we define what does it mean to creat a minimally valid order (single item order in this case). 
+From that moment, whenever that changes, we have exactly one place in the test code to align it to the new implementation.
+Let’s imagine that there is a new requirement:</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>As A customer service operator
+In Order to not make empty promisses, for which we need to appologize later on
+I want that whenever a customer makes an order availability of an item must be checked
+And the order must be denied before confirmation, based on that availability  
+</code></pre></div></div>
+<p>This can be modeled in many different ways but for the sake of the argument let’s assume that we will introduce new domain service <code class="highlighter-rouge">Availability</code> that will be passed to <code class="highlighter-rouge">order</code> method in order to make this new rule explicit. The fixture changes accordingly:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">CustomerActions</span> <span class="o">{</span>
+
+    <span class="kd">private</span> <span class="kd">final</span> <span class="n">Customer</span> <span class="n">customer</span>
+    <span class="kd">private</span> <span class="kd">final</span> <span class="n">WithAvailability</span> <span class="n">fixture</span>
+    
+    <span class="nd">@PackageScope</span>
+    <span class="n">CustomerActions</span><span class="o">(</span><span class="n">Customer</span> <span class="n">customer</span><span class="o">,</span> <span class="n">WithAvailability</span> <span class="n">fixture</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">customer</span> <span class="o">=</span> <span class="n">customer</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">fixture</span> <span class="o">=</span> <span class="n">fixture</span>
+    <span class="o">}</span>
+
+    <span class="kt">void</span> <span class="nf">makesAnOrder</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Item</span><span class="o">&gt;</span> <span class="n">items</span> <span class="o">=</span> <span class="o">[</span><span class="n">item</span><span class="o">()],</span> <span class="n">Availability</span> <span class="n">availability</span> <span class="o">=</span> <span class="n">fixture</span><span class="o">.</span><span class="na">alwaysAvailable</span><span class="o">())</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">customer</span><span class="o">.</span><span class="na">order</span><span class="o">(</span><span class="n">items</span><span class="o">,</span> <span class="n">availability</span><span class="o">)</span>
+    <span class="o">}</span>
+    
+    <span class="kt">void</span> <span class="nf">confirmsOrder</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">this</span><span class="o">.</span><span class="na">customer</span><span class="o">.</span><span class="na">confirmOrder</span><span class="o">()</span>
+    <span class="o">}</span>
+    
+    <span class="kt">void</span> <span class="nf">withNumberOfConfirmedOrders</span><span class="o">(</span><span class="kt">int</span> <span class="n">orders</span><span class="o">)</span> <span class="o">{</span>
+            <span class="n">orders</span><span class="o">.</span><span class="na">times</span> <span class="o">{</span>
+                <span class="n">makesAnOrder</span><span class="o">()</span>
+                <span class="n">confirmsOrder</span><span class="o">()</span>
+            <span class="o">}</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">trait</span> <span class="nc">WithAvailability</span> <span class="o">{</span>
+
+    <span class="n">Availability</span> <span class="nf">alwaysAvailable</span><span class="o">()</span> <span class="o">{...}</span>
+<span class="o">}</span>
+
+</code></pre></div></div>
+<p>Two things happens here:</p>
+<ul>
+  <li>client (test) code is not affected, so every place where we could’ve used this fixture (unit, integration, acceptance tests, other fixtures etc.) stays exactly the same, 
+which dramatically decrease the cripling amount of changes connected with such change, as well as the anxiety connected with proposing such changes in the first place</li>
+  <li>using test fixture for <code class="highlighter-rouge">Availability</code> allows us to stay DRY and reuse the most common stubbings.</li>
+</ul>
+
+<h2 id="default-stubs-and-mockito">Default stubs and Mockito</h2>
+
+<p>When looking at the previous example, one might be thinking of how to deal with the <code class="highlighter-rouge">Availability</code> service inside the <code class="highlighter-rouge">WithAvailability</code> fixture. Most common answer would be to use a Stub pattern, however in most cases stubs are created in the test itself.
+This strategy of recreating stubs for each test that needs them would give us quite a lot of trouble in the long run. The simple implementation that recognizes any item as available will most likely be used for any positive scenario that considers making an order. 
+We can easily use <code class="highlighter-rouge">alwaysAvailable</code> stub to go through test cases like: “makes a successful order”, “receives an email after making an order”, “receives a reminder after making an order without confirmation”, “receives a discount on every fifth order” and so on. None of these scenarios are
+interested in the Items availability, so all of them will be happy to assume that every item is simply always available, especially when there is no need for the test to even be aware of Availability problem.
+Saying that, it’s not far fetched to also say that keeping such Stubs in a separate fixtures allows to stay DRY in many places as well as being open to changes in this model in the future. 
+However the question of how to implement this stub is still open. Depending on the complexity of the service one might start from lambda:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">interface</span> <span class="nc">Availability</span> <span class="o">{</span>
+
+    <span class="kt">boolean</span> <span class="nf">isAvailable</span><span class="o">(</span><span class="n">Item</span> <span class="n">item</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="kd">trait</span> <span class="nc">WithAvailability</span> <span class="o">{</span>
+
+    <span class="n">Availability</span> <span class="nf">alwaysAvailable</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="kc">true</span>
+        <span class="o">}</span> <span class="k">as</span> <span class="n">Availability</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+<p>In most of the cases though, using stubbing framework like Mockito will be a better idea.</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">interface</span> <span class="nc">Availability</span> <span class="o">{</span>
+
+    <span class="kt">boolean</span> <span class="nf">isAvailable</span><span class="o">(</span><span class="n">Item</span> <span class="n">item</span><span class="o">)</span>
+<span class="o">}</span>
+
+<span class="kd">trait</span> <span class="nc">WithAvailability</span> <span class="o">{</span>
+
+    <span class="n">Availability</span> <span class="nf">alwaysAvailable</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="o">{</span>
+            <span class="k">return</span> <span class="kc">true</span>
+        <span class="o">}</span> <span class="k">as</span> <span class="n">Availability</span>
+    <span class="o">}</span>
+    
+    <span class="n">Availability</span> <span class="nf">availableItems</span><span class="o">(</span><span class="n">List</span><span class="o">&lt;</span><span class="n">Item</span><span class="o">&gt;</span> <span class="n">items</span><span class="o">)</span> <span class="o">{</span>
+        <span class="n">Availability</span> <span class="n">stub</span> <span class="o">=</span> <span class="n">Mockito</span><span class="o">.</span><span class="na">mock</span><span class="o">(</span><span class="n">Availability</span><span class="o">)</span>
+        <span class="n">items</span><span class="o">.</span><span class="na">forEach</span> <span class="o">{</span> <span class="n">Item</span> <span class="n">item</span> <span class="o">-&gt;</span>
+            <span class="n">Mockito</span><span class="o">.</span><span class="na">when</span><span class="o">(</span><span class="n">stub</span><span class="o">.</span><span class="na">isAvailable</span><span class="o">(</span><span class="n">item</span><span class="o">)).</span><span class="na">thenReturn</span><span class="o">(</span><span class="kc">true</span><span class="o">)</span>
+        <span class="o">}</span>
+        <span class="k">return</span> <span class="n">stub</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>There is a possibility to use Spock standalone stubs and mocks, however I was never successful in defining any behaviours for them outside of a Specification. As such they still can be used as a Dummy (another one of Test Double patterns)
+or in connection with DI framework (like Spring), with behaviours added inside the test scenario itself.</p>
+
+<h2 id="whats-in-part-2">What’s in part 2?</h2>
+<p>This post has become to long, so I’ve decided to cut it somehow in half. Next time you can expect topics around monkey patching, coercion and parameters, so stay tuned.</p>
+
+
+    </div>
+
+
+</article>
+
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+    <div class="wrapper">
+
+        <h2 class="footer-heading">Szymon Homa about software and things</h2>
+
+        <div class="footer-col-wrapper">
+            <div class="footer-col footer-col-1">
+                <ul class="contact-list">
+                    <li>Szymon Homa</li>
+                    <li><a href="mailto:s2lomon@gmail.com">s2lomon@gmail.com</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col footer-col-2">
+                <ul class="social-media-list">
+                    
+                    <li>
+                        <a href="https://github.com/s2lomon"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">s2lomon</span></a>
+
+                    </li>
+                    
+
+                    
+                    <li>
+                        <a href="https://twitter.com/s2lomon"><span class="icon icon--twitter"><svg viewBox="0 0 16 16">
+    <path fill="#828282" d="M15.969,3.058c-0.586,0.26-1.217,0.436-1.878,0.515c0.675-0.405,1.194-1.045,1.438-1.809c-0.632,0.375-1.332,0.647-2.076,0.793c-0.596-0.636-1.446-1.033-2.387-1.033c-1.806,0-3.27,1.464-3.27,3.27 c0,0.256,0.029,0.506,0.085,0.745C5.163,5.404,2.753,4.102,1.14,2.124C0.859,2.607,0.698,3.168,0.698,3.767 c0,1.134,0.577,2.135,1.455,2.722C1.616,6.472,1.112,6.325,0.671,6.08c0,0.014,0,0.027,0,0.041c0,1.584,1.127,2.906,2.623,3.206 C3.02,9.402,2.731,9.442,2.433,9.442c-0.211,0-0.416-0.021-0.615-0.059c0.416,1.299,1.624,2.245,3.055,2.271 c-1.119,0.877-2.529,1.4-4.061,1.4c-0.264,0-0.524-0.015-0.78-0.046c1.447,0.928,3.166,1.469,5.013,1.469 c6.015,0,9.304-4.983,9.304-9.304c0-0.142-0.003-0.283-0.009-0.423C14.976,4.29,15.531,3.714,15.969,3.058z"/>
+</svg>
+</span><span class="username">s2lomon</span></a>
+
+                    </li>
+                    
+
+                    
+                    <li>
+                        <a href="https://linkedin.com/in/szymon-homa-515ba85b">
+    <span class="icon icon--linkedin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" version="1.0">
+    <defs>
+        <linearGradient id="linearGradient3003" y2="425.4" gradientUnits="userSpaceOnUse" x2="-395.85" gradientTransform="matrix(-0.50335197,0,0,0.50335205,-148.17928,-158.80197)" y1="274.71" x1="-344.15">
+            <stop stop-color="#FFF" offset="0"/>
+            <stop stop-color="#FFF" stop-opacity="0" offset="1"/>
+        </linearGradient>
+    </defs>
+    <rect transform="scale(-1,1)" rx="30.201" ry="30.201" height="199.98" width="200" y="0.011226" x="-200" fill="#069"/>
+    <path opacity="0.7811159" d="m147.16,8.5612-94.32,0c-24.967,0-45.066,20.263-45.066,45.433v92.02c0.80814,19.647,3.9167,7.2266,9.8337-14.531,6.8768-25.287,29.273-47.388,56.547-63.952,20.817-12.642,44.119-20.715,86.533-21.483,24.054-0.43553,21.931-31.218-13.527-37.487z" fill="url(#linearGradient3003)"/>
+    <path d="m63.992,167.85,0-90.884-30.208,0,0,90.884,30.208,0zm-15.1-103.3c10.534,0,17.091-6.9789,17.091-15.7-0.19632-8.9179-6.5566-15.703-16.891-15.703-10.333,0-17.09,6.7852-17.09,15.703,0,8.7216,6.5553,15.7,16.693,15.7h0.19633z" fill="#FFF"/>
+    <path d="m80.712,167.85,30.208,0,0-50.754c0-2.7163,0.19632-5.4298,0.99398-7.3715,2.1838-5.4271,7.1542-11.048,15.499-11.048,10.931,0,15.304,8.3343,15.304,20.552v48.621h30.206v-52.112c0-27.916-14.903-40.905-34.778-40.905-16.296,0-23.451,9.1089-27.426,15.313h0.2017v-13.181h-30.208c0.39641,8.528,0,90.884,0,90.884z" fill="#828282"/>
+</svg></span><span class="username"> Szymon Homa</span>
+</a>
+
+                    </li>
+                    
+                </ul>
+            </div>
+
+            <div class="footer-col footer-col-3">
+                <p>Main topics that this blog should tackle are: Java/Java8, rx-java, reactor, reactive programming, CQRS, NoSQL, TDD, BDD, DDD, modeling, analysis, CleanCode, SOLID, CI, CD, Evolutionary Architecture and so on.
+</p>
+                <p>Icons used here has been made by <a href="http://www.freepik.com/">Freepik</a> from <a href="www.flaticon.com ">www.flaticon.com</a> </p>
+            </div>
+        </div>
+
+    </div>
+
+</footer>
+
+
+    
+    <script type="text/javascript">
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-84865724-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+    
+  </body>
+
+</html>
