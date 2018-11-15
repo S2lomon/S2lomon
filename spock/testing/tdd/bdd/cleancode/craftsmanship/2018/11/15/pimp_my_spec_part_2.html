@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Pimp my spec part 2</title>
+  <meta name="description" content="Last time I was writing about few tricks in creation of test fixtures. How to improve their maintainability in the long run and how touse some of the groovy’...">
+
+  <link rel="stylesheet" href="/css/main.css">
+  <link rel="canonical" href="http://szymonhoma.com/spock/testing/tdd/bdd/cleancode/craftsmanship/2018/11/15/pimp_my_spec_part_2.html">
+  <link rel="alternate" type="application/rss+xml" title="Szymon Homa" href="http://szymonhoma.com/feed.xml">
+
+  <script type="text/javascript" src="/scripts/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="/scripts/jquery-3.1.1.min.js"></script>
+
+</head>
+
+
+  <body>
+
+    <header class="site-header">
+
+    <div class="wrapper">
+
+        <div class="site-title-wrapper">
+            <a class="site-title" href="/">Szymon Homa</a>
+        </div>
+        <div class="site-subtitle">about software and things</div>
+
+        <div class="site-nav-wrapper">
+            <nav class="site-nav">
+                <a href="#" class="menu-icon">
+                    <svg viewBox="0 0 18 15">
+    <path fill="#424242" d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.031C17.335,0,18,0.665,18,1.484L18,1.484z"/>
+    <path fill="#424242" d="M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0c0-0.82,0.665-1.484,1.484-1.484 h15.031C17.335,6.031,18,6.696,18,7.516L18,7.516z"/>
+    <path fill="#424242" d="M18,13.516C18,14.335,17.335,15,16.516,15H1.484C0.665,15,0,14.335,0,13.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.031C17.335,12.031,18,12.696,18,13.516L18,13.516z"/>
+</svg>
+                </a>
+
+                <div class="trigger">
+                    
+                    
+                    <a class="page-link" href="/about/blog">About this blog</a>
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                </div>
+            </nav>
+        </div>
+
+    </div>
+
+</header>
+
+
+    <div class="page-content">
+      <div class="wrapper">
+        <article class="post" itemscope itemtype="http://schema.org/BlogPosting">
+
+    <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">Pimp my spec part 2</h1>
+        <p class="post-meta">
+            <time datetime="2018-11-15T00:00:00-06:00" itemprop="datePublished">Nov 15,
+                2018
+            </time>
+            
+        </p>
+    </header>
+
+    <div class="post-content" itemprop="articleBody">
+        <p>Last <a href="/spock/testing/tdd/bdd/cleancode/craftsmanship/2018/10/20/pimp_my_spec_part_1.html">time</a> I was writing about few tricks in creation of test fixtures. How to improve their maintainability in the long run and how to
+use some of the groovy’s DSL fatures to make them easier to use and read. Most of the techniques in the previous article were trying to wrap SUT 
+in the invocations that are focused on the test context itself, without the need to go into every detail of SUT API. 
+This time I want to focus more on enhancing the SUT itself, that will add to the readeability of the test, without compromising the design of the SUT.
+<!--more--></p>
+
+<h4 id="reflections">Reflections</h4>
+<p>This might sound like a blasphemy for many, but wait with your wrath and vengeance till the very end. First let’s gather few facts:</p>
+
+<ol>
+  <li>Unit Tests are more on the white box than black box side. Sure the more we go into the white box side, the more we make our tests exposed to non-contract breaking changes of the SUT, but we should never forget about that
+fact</li>
+  <li>Reflection in general is bad in terms of maintainability and readability, but Groovy language has a lot of features in it, that omit the visibility of fields, methods, constructors etc., so we get some insights into the object inner structure through the means of a language</li>
+  <li>Most of the TDD practitioners knows that from time to time, when using standard JUnit or TestNG, we were forced to relax something in the SUT, just to be able to test it.</li>
+</ol>
+
+<p>Having all these points in mind, it does not sound so strange to suggest using groovy to get into SUT internals if it saves us from making changes in the SUT, that we would not make for any other reason.</p>
+
+<p>Let’s examine the case bellow:</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kd">class</span> <span class="nc">Order</span> <span class="o">{</span>
+    
+    <span class="kd">private</span> <span class="kt">boolean</span> <span class="n">isPaid</span><span class="o">;</span>
+    <span class="kd">private</span> <span class="n">LocalDateTime</span> <span class="n">paidAt</span><span class="o">;</span>
+    
+    <span class="kt">void</span> <span class="nf">handle</span><span class="o">(</span><span class="n">OrderPaid</span> <span class="n">event</span><span class="o">,</span> <span class="n">Deliveries</span> <span class="n">deliveries</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span><span class="o">(</span><span class="n">hasNotBeenPaidYet</span><span class="o">())</span> <span class="o">{</span>
+            <span class="n">paidAt</span> <span class="o">=</span> <span class="n">event</span><span class="o">.</span><span class="na">occuredAt</span><span class="o">;</span>
+            <span class="n">deliveries</span><span class="o">.</span><span class="na">deliverOrder</span><span class="o">(</span><span class="k">this</span><span class="o">);</span>
+        <span class="o">}</span>
+    <span class="o">}</span>
+    
+    <span class="kd">private</span> <span class="kt">boolean</span> <span class="nf">hasNotBeenPaidYet</span><span class="o">()</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">paidAt</span> <span class="o">==</span> <span class="kc">null</span><span class="o">;</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+<span class="kd">interface</span> <span class="nc">Deliveries</span> <span class="o">{</span>
+    
+    <span class="kt">void</span> <span class="nf">deliverOrder</span><span class="o">(</span><span class="n">Order</span> <span class="n">order</span><span class="o">);</span>
+<span class="o">}</span>
+
+</code></pre></div></div>
+
+<p>In the above code, we have some <code class="highlighter-rouge">Order</code> that tracks many different things that happen when, most likely a customer wants to order some goods. The important thing is, that the payment is in most cases 
+an asynchronous action and will likely happen in some other system. The only thing that we can do is to react to this event and process it accordingly. Most likely this event will be send over some queue, which means that
+it can be delivered more thant just once (see <a href="http://www.cloudcomputingpatterns.org/at_least_once_delivery/">at least once delivery</a>). Still, our application is bounded to do manny actions only once, like communicating with the customer, sending order to the delivery etc. 
+We can handle that, by simply checking whether payment has been already processed or not, here achieved by remembering the time when the order has been paid and checking through <code class="highlighter-rouge">hasNotBeenPaidYet()</code> method.
+Without using groovy, the only way to test this interaction would be to make the ‘'’paidAt’’’ visible at least on the package level. That’s not that tragic, but still such information is rarely used by Order clients, 
+so exposing it “just because” doesn’t make much sense. With groovy (and spock) however, we can do it in a bit different way:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+   <span class="kt">def</span> <span class="s1">'handles order payment'</span> <span class="o">{</span>
+      <span class="nl">given:</span>
+        <span class="n">OrderProcess</span> <span class="n">order</span> <span class="o">=</span> <span class="n">filledOrder</span><span class="o">()</span>
+      <span class="nl">and:</span>
+        <span class="n">Deliveries</span> <span class="n">deliveries</span> <span class="o">=</span> <span class="n">Mock</span><span class="o">()</span>
+      
+      <span class="nl">when:</span>
+        <span class="n">order</span><span class="o">.</span><span class="na">handle</span><span class="o">(</span><span class="n">orderPaid</span><span class="o">(),</span> <span class="n">deliveries</span><span class="o">)</span>
+        
+      <span class="nl">then:</span>
+        <span class="mi">1</span> <span class="o">*</span> <span class="n">deliveries</span><span class="o">.</span><span class="na">deliverOrder</span><span class="o">(</span><span class="n">order</span><span class="o">)</span>
+      <span class="nl">and:</span>
+        <span class="n">order</span><span class="o">.</span><span class="na">paidAt</span> <span class="o">==</span> <span class="n">orderPaid</span><span class="o">().</span><span class="na">occuredAt</span>
+   <span class="o">}</span>
+</code></pre></div></div>
+
+<p>Since it’s groovy we can get access to <code class="highlighter-rouge">paidAt</code> property of <code class="highlighter-rouge">Order</code> object, without changing its visibility from private to package. The same is true for private methods, constructors, static fields and so on.
+So whenever you feel the need to test something that’s not visible from the test perspective, groovy allows for more. 
+Now when you know this, proceed with caution as most of the time you are either overspecifing the test, making it actually harder to maintain, or missing some important hint about your design, which would allow you to 
+not being in this position in the first place.</p>
+
+<h4 id="overriding-parameters-and-monkey-patching">Overriding parameters and monkey patching</h4>
+<p>Closures, default methods and traits are not all of what groovy has to offer in terms of DSL creation. Another powerful feature is the ability to override parameters. 
+Groovy not only allows to override few predefined operators, but overrides many parameters for existing Java classes. Good example of Java class with overriden operations is <code class="highlighter-rouge">BigDecimal</code>. 
+In groovy, whenever we create a new number, if not defined explicitly it will be of <code class="highlighter-rouge">BigDecimal</code> type. Even though it’s a java class, due to parameters overriding, we can do things as follows:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="n">BigDecimal</span> <span class="n">a</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">BigDecimal</span> <span class="n">b</span> <span class="o">=</span> <span class="mf">2.0</span>
+
+<span class="k">assert</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span> <span class="o">==</span> <span class="mf">3.0</span>
+
+</code></pre></div></div>
+
+<p>For simple cases it is well enough. From time to time however, when we are dealing with a bit more complex domains, there is a possibility that some parts of our model will start to resemble a mathematical Closure, 
+with a defined set of possible values and operations that are closed under its set. In DDD a pattern that resembles deeply such mathematical closures are named Closure of Operations. 
+In most of the cases Closure of Operations is created around a subset of one or more ValueObjects. Let’s take a look at an example of such construction.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kd">class</span> <span class="nc">Length</span> <span class="o">{</span>
+    
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">value</span><span class="o">;</span>
+
+    <span class="kd">private</span> <span class="nf">Length</span><span class="o">(</span><span class="kt">int</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">if</span><span class="o">(</span><span class="n">value</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalArgumentException</span><span class="o">(</span><span class="s">"Length can't have a negative value: "</span> <span class="o">+</span> <span class="n">value</span><span class="o">);</span>
+        <span class="o">}</span>
+        
+        <span class="k">this</span><span class="o">.</span><span class="na">value</span> <span class="o">=</span> <span class="n">value</span><span class="o">;</span>
+    <span class="o">}</span>
+    
+    <span class="kd">static</span> <span class="n">Length</span> <span class="nf">m</span><span class="o">(</span><span class="kt">int</span> <span class="n">meters</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">Length</span><span class="o">(</span><span class="n">meters</span> <span class="o">*</span> <span class="mi">1000</span><span class="o">);</span> <span class="c1">//conversion to millimeters</span>
+    <span class="o">}</span>
+    
+    <span class="kd">static</span> <span class="n">Length</span> <span class="nf">cm</span><span class="o">(</span><span class="kt">int</span> <span class="n">centimeters</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">Length</span><span class="o">(</span><span class="n">centimeters</span> <span class="o">*</span> <span class="mi">10</span><span class="o">);</span>
+    <span class="o">}</span>
+    
+    <span class="kd">static</span> <span class="n">Length</span> <span class="nf">mm</span><span class="o">(</span><span class="kt">int</span> <span class="n">millimeters</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">Length</span><span class="o">(</span><span class="n">millimeters</span><span class="o">);</span>
+    <span class="o">}</span>
+    
+    <span class="n">Length</span> <span class="nf">add</span><span class="o">(</span><span class="n">Length</span> <span class="n">length</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">Length</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">value</span> <span class="o">+</span> <span class="n">length</span><span class="o">.</span><span class="na">value</span><span class="o">);</span>
+    <span class="o">}</span>
+    
+    <span class="c1">//Subtractions is not part of mathematical Length closure, but can be quite useful either way</span>
+    <span class="n">Length</span> <span class="nf">substract</span><span class="o">(</span><span class="n">Length</span> <span class="n">length</span><span class="o">)</span> <span class="kd">throws</span> <span class="n">IllegalArgumentException</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="k">new</span> <span class="nf">Length</span><span class="o">(</span><span class="k">this</span><span class="o">.</span><span class="na">value</span> <span class="o">-</span> <span class="n">length</span><span class="o">.</span><span class="na">value</span><span class="o">);</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+<p>For such class, we can have tests as follows:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kn">import</span> <span class="nn">static</span> <span class="n">Length</span><span class="o">.</span><span class="na">m</span>
+<span class="kn">import</span> <span class="nn">static</span> <span class="n">Length</span><span class="o">.</span><span class="na">cm</span>
+
+
+<span class="kd">class</span> <span class="nc">LengthSpecification</span> <span class="kd">extends</span> <span class="n">Specification</span> <span class="o">{</span>
+
+    <span class="kt">def</span> <span class="s2">"adds lenght"</span><span class="o">()</span> <span class="o">{</span>
+        <span class="nl">given:</span>
+            <span class="n">Length</span> <span class="n">m10</span> <span class="o">=</span> <span class="n">m</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span>
+            <span class="n">Length</span> <span class="n">cm13</span> <span class="o">=</span> <span class="n">cm</span><span class="o">(</span><span class="mi">13</span><span class="o">)</span>
+        <span class="nl">expect:</span>
+            <span class="n">m</span><span class="o">(</span><span class="mi">15</span><span class="o">).</span><span class="na">add</span><span class="o">(</span><span class="n">m</span><span class="o">(</span><span class="mi">5</span><span class="o">)).</span><span class="na">add</span><span class="o">(</span><span class="n">cm</span><span class="o">(</span><span class="mi">10</span><span class="o">)).</span><span class="na">add</span><span class="o">(</span><span class="n">cm</span><span class="o">(</span><span class="mi">3</span><span class="o">))</span> <span class="o">==</span> <span class="n">m10</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">m10</span><span class="o">).</span><span class="na">add</span><span class="o">(</span><span class="n">cm13</span><span class="o">)</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+<p>Although it’s readable for any Java developer all these nested methods in a chain looks much worse than a simple <code class="highlighter-rouge">+</code> operations that we can do using <code class="highlighter-rouge">int</code> or <code class="highlighter-rouge">BigDecimal</code>. Luckily Groovy allows for parameter overriding,
+and in this scenario, we could simply override parameter <code class="highlighter-rouge">+</code> to bring back this look and feel of a <code class="highlighter-rouge">Number</code>. In order to do so, we just need to take advantage of groovy operators overriding and implement <code class="highlighter-rouge">plus</code> 
+method on an given object:</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code>
+<span class="kd">class</span> <span class="nc">Length</span> <span class="o">{</span>
+    
+   <span class="c1">//All the methods from the previous example </span>
+    
+   <span class="kd">public</span> <span class="n">Length</span> <span class="nf">plus</span><span class="o">(</span><span class="n">Length</span> <span class="n">other</span><span class="o">)</span> <span class="o">{</span>
+       <span class="k">return</span> <span class="k">this</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">other</span><span class="o">);</span>
+   <span class="o">}</span>     
+<span class="o">}</span>
+
+</code></pre></div></div>
+
+<p>and then simply:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">static</span> <span class="n">Length</span><span class="o">.</span><span class="na">m</span>
+<span class="kn">import</span> <span class="nn">static</span> <span class="n">Length</span><span class="o">.</span><span class="na">cm</span>
+
+<span class="kd">class</span> <span class="nc">LengthSpecification</span> <span class="kd">extends</span> <span class="n">Specification</span> <span class="o">{</span>
+
+     <span class="kt">def</span> <span class="s2">"adds length"</span><span class="o">()</span> <span class="o">{</span>
+        <span class="nl">given:</span>
+            <span class="n">Length</span> <span class="n">m20</span> <span class="o">=</span> <span class="n">m</span> <span class="mi">20</span>
+            <span class="n">Length</span> <span class="n">cm13</span> <span class="o">=</span> <span class="n">cm</span> <span class="mi">13</span>
+        <span class="nl">expect:</span>
+            <span class="n">m</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span> <span class="o">+</span> <span class="n">m</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span> <span class="o">+</span> <span class="n">cm</span><span class="o">(</span><span class="mi">3</span><span class="o">)</span> <span class="o">+</span> <span class="n">cm</span><span class="o">(</span><span class="mi">10</span><span class="o">)</span> <span class="o">==</span> <span class="n">m20</span> <span class="o">+</span> <span class="n">cm13</span>
+     <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+<p>It looks much better right? We can read it almost as if we were making notes. The only problem is that to do so, we need to modify the SUT in order to implement <code class="highlighter-rouge">plus</code> method. 
+Well, here is where the technique called monkey patching comes in. We can actually add methods to existing types and make these methods available in the whole source-set. Here is how to do it:</p>
+
+<ol>
+  <li>First we need to define the <code class="highlighter-rouge">plus</code> method for the Length class, without changing the class itself</li>
+</ol>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">package</span> <span class="nn">com.szymonhoma</span>
+
+<span class="kd">class</span> <span class="nc">LengthExtensions</span> <span class="o">{</span>
+    
+    <span class="kd">public</span> <span class="kd">static</span> <span class="n">Lenght</span> <span class="nf">plus</span><span class="o">(</span><span class="n">Lenght</span> <span class="n">self</span><span class="o">,</span> <span class="n">Lenght</span> <span class="n">next</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">return</span> <span class="n">self</span><span class="o">.</span><span class="na">add</span><span class="o">(</span><span class="n">next</span><span class="o">)</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+<ol>
+  <li>Now when we have the extension, we need to define it as <code class="highlighter-rouge">ExtensionModule</code>. In order to do so, we need to provide an additional file in META-INF folder, 
+located under <code class="highlighter-rouge">src/test/resources/META-INF/services/</code> and call it <code class="highlighter-rouge">org.codehaus.groovy.runtime.ExtensionModule</code>. We create it under <code class="highlighter-rouge">src/test</code> path so that it won’t leak to production code. It takes structure as follows:</li>
+</ol>
+
+<div class="language-properties highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="py">moduleName</span><span class="p">=</span><span class="s">local test extensions</span>
+<span class="py">moduleVersion</span><span class="p">=</span><span class="s">0.0.1 </span>
+<span class="py">extensionClasses</span><span class="p">=</span><span class="s">com.szymonhoma.LengthExtensions,com.szymonhoma.SomeOtherExtensionIfRequired</span>
+</code></pre></div></div>
+
+<p>After that we can start using <code class="highlighter-rouge">+</code> operator inside our tests, without even touching the <code class="highlighter-rouge">Length</code> class. The more in detail description of how to use <code class="highlighter-rouge">ExtensionModule</code> can be found at <a href="http://mrhaki.blogspot.com/2013/01/groovy-goodness-adding-extra-methods.html">mrhaki.blogspot.com</a></p>
+
+<h4 id="coercion-and-monkey-patching">Coercion and monkey patching</h4>
+
+<p>Let’s stay a bit more with our <code class="highlighter-rouge">Length</code> class here. As a vigilant reader might have noticed, I’m allowing myself in the examples above to use such notation <code class="highlighter-rouge">Length m20 = m 20</code>, that ommits <code class="highlighter-rouge">()</code>. This is simply
+another way of methods invocation provided by groovy and it allows me to have a bit more fluent experience when reading such tests. Let’s explore some other ways of creating objects in groovy that are reader friendly. It might seem
+that the most straight forward way of creating a Lenght would be to do it as follows:</p>
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Length</span> <span class="n">a</span> <span class="o">=</span> <span class="mi">10</span>
+</code></pre></div></div>
+<p>Looks ok? Well actually, one might ask whether we’ve just created a 10 cm, m or mm <code class="highlighter-rouge">Length</code>. That’s a fair question in general, however in this case we are dealing with units and the basic unit of length in SI is 1 Meter,
+so I would allow such construction. In addition, we might want to be able to express cm and mm as simply 0.01 and 0.001, which would allow us to write:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">Length</span> <span class="n">m1</span> <span class="o">=</span> <span class="mi">1</span>
+<span class="n">Length</span> <span class="n">cm1</span> <span class="o">=</span> <span class="mf">0.01</span>
+<span class="n">Length</span> <span class="n">mm1</span> <span class="o">=</span> <span class="mf">0.001</span>
+
+</code></pre></div></div>
+<p>Looks even better, right? Well maybe not quite, as one might want to ask “But what about 0.00000001 Length, will we allow such constructions to occur?”. Obviously not, as our model states precisely that we can have at most 1 mm Length and nothing smaller.
+Let’s write some specification then:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">def</span> <span class="s1">'allows to create Length in reader friendly manner'</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nl">given:</span>
+        <span class="n">Length</span> <span class="n">m1</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">Length</span> <span class="n">cm1</span> <span class="o">=</span> <span class="mf">0.01</span>
+        <span class="n">Length</span> <span class="n">mm1</span> <span class="o">=</span> <span class="mf">0.001</span>
+        
+    <span class="nl">expect:</span>
+        <span class="n">m1</span> <span class="o">==</span> <span class="n">m</span> <span class="mi">1</span>
+        <span class="n">cm1</span> <span class="o">==</span> <span class="n">cm</span> <span class="mi">1</span>
+        <span class="n">mm1</span> <span class="o">==</span> <span class="n">mm</span> <span class="mi">1</span>    
+<span class="o">}</span>
+
+<span class="kt">def</span> <span class="s1">'does not allow to create values of precision beyond our skills'</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nl">when:</span>
+        <span class="n">Length</span> <span class="n">um</span> <span class="o">=</span> <span class="mf">0.000001</span>
+        
+    <span class="nl">then:</span>
+        <span class="n">thrown</span> <span class="n">IllegalArgumentException</span>
+<span class="o">}</span>
+</code></pre></div></div>
+<p>How to achieve such effect? Well it’s not possible in such form, but let’s see how close can we approach it. In groovy there is a mechanism known as coercion, which allows nicer types conversion. 
+It can be invoked through the use of <code class="highlighter-rouge">as</code> key-word, so we might write in groovy:
+<code class="highlighter-rouge">Integer a = 1.00 as Integer</code> which converts <code class="highlighter-rouge">new BigDecimal(1.00)</code> to <code class="highlighter-rouge">Integer</code> or <code class="highlighter-rouge">Set values = [1, 2, 3] as Set</code> which converts a <code class="highlighter-rouge">List</code> to a <code class="highlighter-rouge">Set</code>. The tricky part here is that we want to achieve
+the conversion from <code class="highlighter-rouge">BigDecimal</code> to <code class="highlighter-rouge">Length</code> and <code class="highlighter-rouge">BigDecimal</code> already has some conversions defined. Here is how to deal with that.</p>
+
+<p>Let’s create a <code class="highlighter-rouge">BigDecimalExtension</code> class with <code class="highlighter-rouge">public static def asType(BigDecimal self, Class target)</code> method defined (it’s used to support the coercion mechanism)</p>
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">BigDecimalExtension</span> <span class="o">{</span>
+    
+    <span class="kd">static</span> <span class="kt">def</span> <span class="nf">asType</span><span class="o">(</span><span class="n">BigDecimal</span> <span class="n">self</span><span class="o">,</span> <span class="n">Class</span> <span class="n">target</span><span class="o">)</span> <span class="o">{</span>
+        <span class="k">switch</span> <span class="o">(</span><span class="n">target</span><span class="o">)</span> <span class="o">{</span>
+            <span class="k">case</span> <span class="nl">Length:</span>
+                <span class="k">if</span><span class="o">(</span><span class="n">self</span><span class="o">.</span><span class="na">precision</span><span class="o">()</span> <span class="o">&gt;</span> <span class="mi">3</span><span class="o">)</span> <span class="o">{</span>
+                    <span class="k">throw</span> <span class="k">new</span> <span class="nf">IllegalArgumentException</span><span class="o">(</span><span class="s2">"can't produce length of greater precision that mm"</span><span class="o">)</span>
+                <span class="o">}</span>
+                <span class="k">return</span> <span class="n">Length</span><span class="o">.</span><span class="na">mm</span><span class="o">(</span>
+                        <span class="n">self</span><span class="o">.</span><span class="na">multiply</span><span class="o">(</span><span class="mi">1000</span><span class="o">).</span><span class="na">toInteger</span><span class="o">()</span>
+                <span class="o">)</span>
+            <span class="nl">default:</span>
+                <span class="k">return</span> <span class="n">DefaultGroovyMethods</span><span class="o">.</span><span class="na">asType</span><span class="o">(</span><span class="n">self</span><span class="o">,</span> <span class="n">target</span><span class="o">)</span>
+        <span class="o">}</span>       
+    <span class="o">}</span>
+<span class="o">}</span>
+</code></pre></div></div>
+<p>Few notes to this implementation:</p>
+<ul>
+  <li>we are extending <code class="highlighter-rouge">BigDecimal</code>, so our <code class="highlighter-rouge">Length</code> case is one of the possibilities (hence <code class="highlighter-rouge">switch</code>) and that’s why I wouldn’t define this coercion f.e. in <code class="highlighter-rouge">LenghtExtension</code> class</li>
+  <li>We’ve said that we won’t allow for greater precision that millimeters, so we need to check this before creating <code class="highlighter-rouge">Length</code></li>
+  <li>In order to not break any other coercions that might have been defined in groovy sdk, we need to use <code class="highlighter-rouge">DefaultGroovyMethods.asType(self, target)</code>. 
+Important thing here is that we are using internal Groovy api at this moment, and as it’s not likely to be changed, there is no guarantee for it in the long run. Let me cite the docs:
+    <div class="language-text highlighter-rouge"><div class="highlight"><pre class="highlight"><code>NOTE: While this class contains many 'public' static methods, 
+it is primarily regarded as an internal class (its internal package name suggests this also). 
+We value backwards compatibility of these methods when used within Groovy 
+but value less backwards compatibility at the Java method call level. 
+I.e. future versions of Groovy may remove or move a method call in this file 
+but would normally aim to keep the method available from within Groovy.
+</code></pre></div>    </div>
+    <p>You’ve been warned.</p>
+  </li>
+</ul>
+
+<p>Next, we need to add this extension to our extension module, exactly as in the case of <code class="highlighter-rouge">LengthExtension</code> described previously.
+When all of it is defined, we can use our coercion in tests as follows:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">def</span> <span class="s1">'allows to create Length in reader friendly manner'</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nl">given:</span>
+        <span class="n">Length</span> <span class="n">m1</span> <span class="o">=</span> <span class="mi">1</span> <span class="k">as</span> <span class="n">Length</span>
+        <span class="n">Length</span> <span class="n">cm1</span> <span class="o">=</span> <span class="mf">0.01</span> <span class="k">as</span> <span class="n">Length</span>
+        <span class="n">Length</span> <span class="n">mm1</span> <span class="o">=</span> <span class="mf">0.001</span> <span class="k">as</span> <span class="n">Length</span>
+        
+    <span class="nl">expect:</span>
+        <span class="n">m1</span> <span class="o">==</span> <span class="n">m</span> <span class="mi">1</span>
+        <span class="n">cm1</span> <span class="o">==</span> <span class="n">cm</span> <span class="mi">1</span>
+        <span class="n">mm1</span> <span class="o">==</span> <span class="n">mm</span> <span class="mi">1</span>    
+<span class="o">}</span>
+
+<span class="kt">def</span> <span class="s1">'does not allow to create values of precision beyond our skills'</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nl">when:</span>
+        <span class="n">Length</span> <span class="n">um</span> <span class="o">=</span> <span class="mf">0.000001</span> <span class="k">as</span> <span class="n">Length</span>
+        
+    <span class="nl">then:</span>
+        <span class="n">thrown</span> <span class="n">IllegalArgumentException</span>
+<span class="o">}</span>
+
+<span class="kt">def</span> <span class="s1">'can be used as method arguments as well'</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nl">when:</span>
+        <span class="n">Length</span> <span class="n">a</span> <span class="o">=</span> <span class="mf">5.00</span> <span class="k">as</span> <span class="n">Length</span>
+
+    <span class="nl">expect:</span>
+        <span class="n">a</span><span class="o">.</span><span class="na">plus</span><span class="o">(</span><span class="mf">10.00</span> <span class="k">as</span> <span class="n">Length</span><span class="o">)</span> <span class="o">==</span> <span class="mf">15.00</span> <span class="k">as</span> <span class="n">Length</span>
+<span class="o">}</span>
+
+</code></pre></div></div>
+<p>Unfortunately we can’t have something like <code class="highlighter-rouge">a + 10.00 as Length</code>, due the way in which the parameters are resolved.
+I personaly like this formalization of <code class="highlighter-rouge">as Length</code> as it makes quite good job when I read such tests, but it’s for the reader of this article to decide, whether it’s worth the hassle.
+Is there really nothing more that we can do? Well there is one small thing. Groovy supports a coercion from <code class="highlighter-rouge">[]</code> to any type, assuming that next items in the list are the constructor arguments of a type that we want to create.
+It might look something as follows: <code class="highlighter-rouge">Length a = [10.00]</code>. Let’s write some test for it:</p>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">def</span> <span class="s2">"allows for creation by [int] coercion"</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nl">given:</span>
+        <span class="n">Length</span> <span class="n">a</span> <span class="o">=</span> <span class="o">[</span><span class="mi">1</span><span class="o">]</span>
+    <span class="nl">expect:</span>
+        <span class="n">a</span> <span class="o">==</span> <span class="n">Length</span><span class="o">.</span><span class="na">mm</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="c1">//will work</span>
+<span class="o">}</span>
+
+<span class="kt">def</span> <span class="s2">"allows for creation by [BigDecimall] coercion"</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nl">given:</span>
+        <span class="n">Length</span> <span class="n">a</span> <span class="o">=</span> <span class="o">[</span><span class="mf">1.11</span><span class="o">]</span> <span class="c1">//will fail</span>
+    <span class="nl">expect:</span>
+        <span class="n">a</span> <span class="o">==</span> <span class="n">m</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="o">+</span> <span class="n">cm</span><span class="o">(</span><span class="mi">11</span><span class="o">)</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>The first test works, because we allready have a constructor in <code class="highlighter-rouge">Length</code> class that takes single <code class="highlighter-rouge">int</code> parameter in and Groovy doesn’t really care whether it’s private or not. 
+For the second example however we need to have a proper constructor defined. To do so, we simply need to add a <strong>private</strong> constructor to the Length class itself and just pretend that it has allways been there.</p>
+
+<div class="language-java highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kd">class</span> <span class="nc">Length</span> <span class="o">{</span>
+
+    <span class="kd">private</span> <span class="kd">final</span> <span class="kt">int</span> <span class="n">value</span><span class="o">;</span>
+
+    <span class="c1">//Just for test usage</span>
+    <span class="kd">private</span> <span class="nf">Length</span><span class="o">(</span><span class="n">BigDecimal</span> <span class="n">val</span><span class="o">)</span> <span class="o">{</span>
+        <span class="o">...</span>
+    <span class="o">}</span>
+    
+    <span class="kd">private</span> <span class="nf">Length</span><span class="o">(</span><span class="kt">int</span> <span class="n">value</span><span class="o">)</span> <span class="o">{</span>
+        <span class="o">...</span>
+    <span class="o">}</span>
+<span class="o">}</span>
+
+</code></pre></div></div>
+
+<div class="language-groovy highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">def</span> <span class="s2">"allows for creation by [BigDecimall] coercion"</span><span class="o">()</span> <span class="o">{</span>
+    <span class="nl">given:</span>
+        <span class="n">Length</span> <span class="n">a</span> <span class="o">=</span> <span class="o">[</span><span class="mf">1.11</span><span class="o">]</span> <span class="c1">//now will work like a charm</span>
+    <span class="nl">expect:</span>
+        <span class="n">a</span> <span class="o">==</span> <span class="n">m</span><span class="o">(</span><span class="mi">1</span><span class="o">)</span> <span class="o">+</span> <span class="n">cm</span><span class="o">(</span><span class="mi">11</span><span class="o">)</span>
+<span class="o">}</span>
+</code></pre></div></div>
+
+<p>That’s a good trade-off for me, as it’s very simple and the constructor is not visible for the Java code either way. It’s worth to mention that Groovy allows adding non existing constructors through metaClass, 
+but it has a lot of issues, like high probability of receiving<code class="highlighter-rouge">StackOverflowException</code>.</p>
+
+<h4 id="ok-so-thats-it">Ok so that’s it.</h4>
+<p>I hope that someone might find this (and the <a href="/spock/testing/tdd/bdd/cleancode/craftsmanship/2018/10/20/pimp_my_spec_part_1.html">previous article</a>) helpful. 
+When you are looking for more ways of improving your tests I recommend you this recording of Jakub Nabradlik’s <a href="https://www.youtube.com/watch?v=lJT0aZbrWUo">Improving your Test Driven Development in 45 minutes</a> talk at GeeCON 2018 and on few other occasions.</p>
+
+    </div>
+
+
+</article>
+
+
+      </div>
+    </div>
+
+    <footer class="site-footer">
+
+    <div class="wrapper">
+
+        <h2 class="footer-heading">Szymon Homa about software and things</h2>
+
+        <div class="footer-col-wrapper">
+            <div class="footer-col footer-col-1">
+                <ul class="contact-list">
+                    <li>Szymon Homa</li>
+                    <li><a href="mailto:s2lomon@gmail.com">s2lomon@gmail.com</a></li>
+                </ul>
+            </div>
+
+            <div class="footer-col footer-col-2">
+                <ul class="social-media-list">
+                    
+                    <li>
+                        <a href="https://github.com/s2lomon"><span class="icon icon--github"><svg viewBox="0 0 16 16"><path fill="#828282" d="M7.999,0.431c-4.285,0-7.76,3.474-7.76,7.761 c0,3.428,2.223,6.337,5.307,7.363c0.388,0.071,0.53-0.168,0.53-0.374c0-0.184-0.007-0.672-0.01-1.32 c-2.159,0.469-2.614-1.04-2.614-1.04c-0.353-0.896-0.862-1.135-0.862-1.135c-0.705-0.481,0.053-0.472,0.053-0.472 c0.779,0.055,1.189,0.8,1.189,0.8c0.692,1.186,1.816,0.843,2.258,0.645c0.071-0.502,0.271-0.843,0.493-1.037 C4.86,11.425,3.049,10.76,3.049,7.786c0-0.847,0.302-1.54,0.799-2.082C3.768,5.507,3.501,4.718,3.924,3.65 c0,0,0.652-0.209,2.134,0.796C6.677,4.273,7.34,4.187,8,4.184c0.659,0.003,1.323,0.089,1.943,0.261 c1.482-1.004,2.132-0.796,2.132-0.796c0.423,1.068,0.157,1.857,0.077,2.054c0.497,0.542,0.798,1.235,0.798,2.082 c0,2.981-1.814,3.637-3.543,3.829c0.279,0.24,0.527,0.713,0.527,1.437c0,1.037-0.01,1.874-0.01,2.129 c0,0.208,0.14,0.449,0.534,0.373c3.081-1.028,5.302-3.935,5.302-7.362C15.76,3.906,12.285,0.431,7.999,0.431z"/></svg>
+</span><span class="username">s2lomon</span></a>
+
+                    </li>
+                    
+
+                    
+                    <li>
+                        <a href="https://twitter.com/s2lomon"><span class="icon icon--twitter"><svg viewBox="0 0 16 16">
+    <path fill="#828282" d="M15.969,3.058c-0.586,0.26-1.217,0.436-1.878,0.515c0.675-0.405,1.194-1.045,1.438-1.809c-0.632,0.375-1.332,0.647-2.076,0.793c-0.596-0.636-1.446-1.033-2.387-1.033c-1.806,0-3.27,1.464-3.27,3.27 c0,0.256,0.029,0.506,0.085,0.745C5.163,5.404,2.753,4.102,1.14,2.124C0.859,2.607,0.698,3.168,0.698,3.767 c0,1.134,0.577,2.135,1.455,2.722C1.616,6.472,1.112,6.325,0.671,6.08c0,0.014,0,0.027,0,0.041c0,1.584,1.127,2.906,2.623,3.206 C3.02,9.402,2.731,9.442,2.433,9.442c-0.211,0-0.416-0.021-0.615-0.059c0.416,1.299,1.624,2.245,3.055,2.271 c-1.119,0.877-2.529,1.4-4.061,1.4c-0.264,0-0.524-0.015-0.78-0.046c1.447,0.928,3.166,1.469,5.013,1.469 c6.015,0,9.304-4.983,9.304-9.304c0-0.142-0.003-0.283-0.009-0.423C14.976,4.29,15.531,3.714,15.969,3.058z"/>
+</svg>
+</span><span class="username">s2lomon</span></a>
+
+                    </li>
+                    
+
+                    
+                    <li>
+                        <a href="https://linkedin.com/in/szymon-homa-515ba85b">
+    <span class="icon icon--linkedin"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" version="1.0">
+    <defs>
+        <linearGradient id="linearGradient3003" y2="425.4" gradientUnits="userSpaceOnUse" x2="-395.85" gradientTransform="matrix(-0.50335197,0,0,0.50335205,-148.17928,-158.80197)" y1="274.71" x1="-344.15">
+            <stop stop-color="#FFF" offset="0"/>
+            <stop stop-color="#FFF" stop-opacity="0" offset="1"/>
+        </linearGradient>
+    </defs>
+    <rect transform="scale(-1,1)" rx="30.201" ry="30.201" height="199.98" width="200" y="0.011226" x="-200" fill="#069"/>
+    <path opacity="0.7811159" d="m147.16,8.5612-94.32,0c-24.967,0-45.066,20.263-45.066,45.433v92.02c0.80814,19.647,3.9167,7.2266,9.8337-14.531,6.8768-25.287,29.273-47.388,56.547-63.952,20.817-12.642,44.119-20.715,86.533-21.483,24.054-0.43553,21.931-31.218-13.527-37.487z" fill="url(#linearGradient3003)"/>
+    <path d="m63.992,167.85,0-90.884-30.208,0,0,90.884,30.208,0zm-15.1-103.3c10.534,0,17.091-6.9789,17.091-15.7-0.19632-8.9179-6.5566-15.703-16.891-15.703-10.333,0-17.09,6.7852-17.09,15.703,0,8.7216,6.5553,15.7,16.693,15.7h0.19633z" fill="#FFF"/>
+    <path d="m80.712,167.85,30.208,0,0-50.754c0-2.7163,0.19632-5.4298,0.99398-7.3715,2.1838-5.4271,7.1542-11.048,15.499-11.048,10.931,0,15.304,8.3343,15.304,20.552v48.621h30.206v-52.112c0-27.916-14.903-40.905-34.778-40.905-16.296,0-23.451,9.1089-27.426,15.313h0.2017v-13.181h-30.208c0.39641,8.528,0,90.884,0,90.884z" fill="#828282"/>
+</svg></span><span class="username"> Szymon Homa</span>
+</a>
+
+                    </li>
+                    
+                </ul>
+            </div>
+
+            <div class="footer-col footer-col-3">
+                <p>Main topics that this blog should tackle are: Java/Java8, rx-java, reactor, reactive programming, CQRS, NoSQL, TDD, BDD, DDD, modeling, analysis, CleanCode, SOLID, CI, CD, Evolutionary Architecture and so on.
+</p>
+                <p>Icons used here has been made by <a href="http://www.freepik.com/">Freepik</a> from <a href="www.flaticon.com ">www.flaticon.com</a> </p>
+            </div>
+        </div>
+
+    </div>
+
+</footer>
+
+
+    
+    <script type="text/javascript">
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+  ga('create', 'UA-84865724-1', 'auto');
+  ga('send', 'pageview');
+
+</script>
+    
+  </body>
+
+</html>
